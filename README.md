@@ -187,5 +187,5 @@ This implementation is for educational and research purposes.
 Always cite the original paper and the Kaggle dataset when using the code.
 output is as followsw: <img width="720" height="260" alt="WhatsApp Image 2026-09-18 at 7 19 44 PM (2)" src="https://github.com/user-attachments/assets/824a112c-183d-427b-a33f-079e3040fb15" />
 <img width="720" height="322" alt="WhatsApp Image 2026-09-18 at 7 19 44 PM (1)" src="https://github.com/user-attachments/assets/699fac1d-40a2-443a-a784-c86b490128d6" />
-<img width="720" height="260" alt="WhatsApp Image 2026-09-18 at 7 19 44 PM (2)" src="https://github.com/user-attachments/assets/5b47d230-6bb0-4aab-a02b-8ce28014ebdc" />
 
+<img width="439" height="338" alt="WhatsApp Image 2026-09-18 at 7 19 44 PM" src="https://github.com/user-attachments/assets/97ab61fc-f600-48dd-93ff-c67c2e4725ba" />
