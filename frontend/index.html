@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroVision AI – Brain Tumor Diagnosis</title>
+  <style>
+    :root {
+      --primary: #0d47a1;
+      --accent: #00acc1;
+      --bg: #f5f7fa;
+      --card: #ffffff;
+      --text: #1a237e;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem 1rem;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    header h1 {
+      font-size: 2rem;
+      color: var(--primary);
+    }
+    header p {
+      color: #546e7a;
+      margin-top: 0.5rem;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 8px 30px rgba(0,0,0,0.08);
+      padding: 2rem;
+      width: 100%;
+      max-width: 720px;
+    }
+    .upload-area {
+      border: 2px dashed #90caf9;
+      border-radius: 12px;
+      padding: 2.5rem;
+      text-align: center;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .upload-area:hover, .upload-area.dragover {
+      background: #e3f2fd;
+    }
+    input[type="file"] { display: none; }
+    button {
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      color: white;
+      border: none;
+      padding: 0.9rem 2rem;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 1.5rem;
+      width: 100%;
+      transition: opacity 0.2s;
+    }
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    .result {
+      margin-top: 2rem;
+      display: none;
+    }
+    .result.show { display: block; }
+    .pred {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .conf {
+      color: #546e7a;
+      margin: 0.3rem 0 1rem;
+    }
+    .probs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+    }
+    .prob-item {
+      background: #e8eaf6;
+      padding: 0.5rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+    }
+    .heatmap-img {
+      width: 100%;
+      border-radius: 12px;
+      border: 1px solid #cfd8dc;
+    }
+    .loader {
+      display: none;
+      text-align: center;
+      margin-top: 1rem;
+      color: var(--accent);
+    }
+    .loader.show { display: block; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🧠 NeuroVision AI</h1>
+    <p>Privacy-preserving Brain Tumor Diagnosis with Federated Learning &amp; Grad-CAM</p>
+  </header>
+
+  <div class="card">
+    <div class="upload-area" id="dropZone">
+      <p style="font-size:1.1rem; margin-bottom:0.5rem;">Drop MRI image here or click to browse</p>
+      <p style="font-size:0.85rem; color:#78909c;">JPG / PNG supported</p>
+      <input type="file" id="fileInput" accept="image/*" />
+    </div>
+    <button id="predictBtn" disabled>Analyze MRI</button>
+    <div class="loader" id="loader">Analyzing… please wait</div>
+
+    <div class="result" id="result">
+      <div class="pred" id="predClass"></div>
+      <div class="conf" id="confidence"></div>
+      <div class="probs" id="probs"></div>
+      <h3 style="margin-bottom:0.5rem;">Grad-CAM Explanation</h3>
+      <img class="heatmap-img" id="heatmap" alt="Grad-CAM heatmap" />
+    </div>
+  </div>
+
+  <script>
+    const API = "http://localhost:8000";
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+    const predictBtn = document.getElementById("predictBtn");
+    const loader = document.getElementById("loader");
+    const resultDiv = document.getElementById("result");
+    let selectedFile = null;
+
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("dragover", e => {
+      e.preventDefault();
+      dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+    dropZone.addEventListener("drop", e => {
+      e.preventDefault();
+      dropZone.classList.remove("dragover");
+      if (e.dataTransfer.files.length) {
+        selectedFile = e.dataTransfer.files[0];
+        dropZone.querySelector("p").textContent = selectedFile.name;
+        predictBtn.disabled = false;
+      }
+    });
+    fileInput.addEventListener("change", () => {
+      if (fileInput.files.length) {
+        selectedFile = fileInput.files[0];
+        dropZone.querySelector("p").textContent = selectedFile.name;
+        predictBtn.disabled = false;
+      }
+    });
+
+    predictBtn.addEventListener("click", async () => {
+      if (!selectedFile) return;
+      loader.classList.add("show");
+      resultDiv.classList.remove("show");
+      predictBtn.disabled = true;
+
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      try {
+        const res = await fetch(`${API}/predict`, {
+          method: "POST",
+          body: formData,
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || "Prediction failed");
+        }
+        const data = await res.json();
+
+        document.getElementById("predClass").textContent =
+          `Prediction: ${data.predicted_class.toUpperCase()}`;
+        document.getElementById("confidence").textContent =
+          `Confidence: ${(data.confidence * 100).toFixed(2)}%`;
+
+        const probsEl = document.getElementById("probs");
+        probsEl.innerHTML = "";
+        for (const [cls, p] of Object.entries(data.all_probabilities)) {
+          probsEl.innerHTML += `<div class="prob-item">${cls}: ${(p * 100).toFixed(1)}%</div>`;
+        }
+
+        document.getElementById("heatmap").src =
+          `data:image/png;base64,${data.gradcam_heatmap}`;
+
+        resultDiv.classList.add("show");
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        loader.classList.remove("show");
+        predictBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
